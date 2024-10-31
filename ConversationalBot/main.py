@@ -15,9 +15,10 @@ bot.
 """
 
 import logging
+import os
 
-TELEGRAM_TOKEN = "7401815042:AAF2OrPhPmpN-g-oCDaHUdmad90TqRe-YMo"
-MONGO_URI = "mongodb+srv://pathclimbing:kG2sQYkAOhef6wlM@climbing-path.u52tc.mongodb.net/"
+TELEGRAM_TOKEN = os.environ.get("MONGO_URI")
+MONGO_URI = os.environ.get("MONGO_URI")
 
 import pymongo
 
