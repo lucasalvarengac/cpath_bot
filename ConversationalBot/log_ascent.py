@@ -21,22 +21,56 @@ logger = logging.getLogger(__name__)
 
 ROUTE_NAME, SECTOR, CRAG, ASCENT_TYPE, SEND_TYPE, GRADE, DATE, LOCATION, NOTES = range(9)
 
+class AscentBuilder:
+    def __init__(self):
+        self.ascent = {}
+        self.ascent._id = ObjectId()
+        self.ascent.created_at = int(datetime.now().timestamp())
+        self.ascent.updated_at = 0
+        self.ascent.deleted_at = 0
+        
+    def set_route_name(self, route_name):
+        self.ascent["route_name"] = route_name
+
+    def set_sector(self, sector):
+        self.ascent["sector"] = sector
+
+    def set_crag(self, crag):
+        self.ascent["crag"] = crag
+
+    def set_ascent_type(self, ascent_type):
+        self.ascent["type"] = ascent_type
+
+    def set_send_type(self, send_type):
+        self.ascent["send_type"] = send_type
+
+    def set_grade(self, grade):
+        self.ascent["grade"] = grade
+
+    def set_date(self, date):
+        self.ascent["date"] = int(datetime.strptime(date, "%d/%m/%Y").timestamp())
+
+    def set_location(self, latitude, longitude):
+        self.ascent["location"] = {"latitude": latitude, "longitude": longitude}
+
+    def set_notes(self, notes):
+        self.ascent["notes"] = notes
+    
+    def set_user_id(self, user_id):
+        self.ascent["user_id"] = user_id
+
+    def get_ascent(self):
+        return self.ascent
+    
+    def build(self):
+        return self.ascent
+        
+    
+
 class logAscent:
     def __init__(self, mongo_client):
         self.mongo_client = mongo_client
-        self.ascent = {
-            "_id": ObjectId(),
-            "route_name": None,
-            "sector": None,
-            "type": None,
-            "crag": None,
-            "grade": None,
-            "date": None,
-            "location": None,
-            "notes": None,
-            "created_at": None,
-            "deleted_at": 0,
-        }
+        self.ascent = AscentBuilder()
         
     def get_user(self, telegram_id):
         return self.mongo_client.users.find_one({"telegram_id": telegram_id, "deleted_at": 0})
@@ -44,8 +78,7 @@ class logAscent:
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Starts the conversation and asks the user about the route name"""
         logger.info("User started the conversation")
-        self.ascent["created_at"] = int(datetime.now().timestamp())
-        self.ascent["user_id"] = self.get_user(telegram_id=update.message.from_user.id)["_id"]
+        self.ascent.set_user_id(self.get_user(telegram_id=update.message.from_user.id)["_id"])
         await update.message.reply_text(
             "Olá! Vamos começar a registrar a sua escalada. Qual é o nome da via que você escalou?",
             # reply_markup=ReplyKeyboardRemove(),
@@ -55,7 +88,7 @@ class logAscent:
     
     async def route_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Stores the inputed route name and asks for the sector."""
-        self.ascent["route_name"] = update.message.text
+        self.ascent.set_route_name(update.message.text)
         logger.info(f"Route name of the user: {self.ascent['route_name']}")
         await update.message.reply_text(
             f"Qual é o setor da escalada?\n\nSe você quiser pular essa etapa, digite /pular.",
@@ -64,7 +97,7 @@ class logAscent:
     
     async def sector(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Stores the inputed sector and asks for crag name."""
-        self.ascent["sector"] = update.message.text
+        self.ascent.set_sector(update.message.text)
         logger.info(f"Sector of the user: {self.ascent['sector']}")
         await update.message.reply_text(
             f"Qual é o nome do pico?\n\nSe você quiser pular essa etapa, digite /pular.",
@@ -74,11 +107,11 @@ class logAscent:
     
     async def crag(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Stores the inputed crag and asks for ascent type."""
-        self.ascent["crag"] = update.message.text
+        self.ascent.set_crag(update.message.text)
         logger.info(f"Crag of the user: {self.ascent['crag']}")
         ascent_types = [["Top Rope", "Guiada", "Boulder", "Free Solo"]]
         await update.message.reply_text(
-            f"Qual foi a modalidade de escalada?\n\nSe você quiser pular essa etapa, digite /pular.",
+            f"""Qual foi a modalidade de escalada? Se você quiser pular essa etapa, digite /pular.""",
             reply_markup=ReplyKeyboardMarkup(ascent_types, one_time_keyboard=True),
         )
 
@@ -96,7 +129,7 @@ class logAscent:
     
     async def ascent_type(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Stores the inputed ascent type and asks for grade."""
-        self.ascent["type"] = update.message.text
+        self.ascent.set_ascent_type(update.message.text)
         logger.info(f"Ascent type of the user: {self.ascent['type']}")
         send_types = [["Redpoint", "Flash", "À Vista", "À Vista Sacando"]]
         await update.message.reply_text(
@@ -118,7 +151,7 @@ class logAscent:
     
     async def send_type(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Stores the inputed send type and asks for grade."""
-        self.ascent["send_type"] = update.message.text
+        self.ascent.set_send_type(update.message_text)
         logger.info(f"Send type of the user: {self.ascent['send_type']}")
         await update.message.reply_text(
             f"Qual é a graduação da via? (informar em grau brasileiro)\n\nSe você quiser pular essa etapa, digite /pular.",
@@ -136,7 +169,7 @@ class logAscent:
     
     async def grade(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Stores the inputed grade and asks for date."""
-        self.ascent["grade"] = update.message.text
+        self.ascent.set_grade(update.message_text)
         logger.info(f"Grade of the user: {self.ascent['grade']}")
         await update.message.reply_text(
             f"Qual foi a data da escalada?\n Por favor, informe no formato DD/MM/AAAA.\n\nSe você quiser pular essa etapa, digite /pular.",
@@ -154,8 +187,7 @@ class logAscent:
     
     async def date(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Stores the inputed date and asks for location."""
-        raw_date = update.message.text
-        self.ascent["date"] = int(datetime.strptime(raw_date, "%d/%m/%Y").timestamp())
+        self.ascent.set_date(update.message.text)
         logger.info(f"Date of the user: {self.ascent['date']}")
         await update.message.reply_text(
             f"Qual é a localização da escalada? Basta compartilhar sua localização comigo!.\n\nSe você quiser pular essa etapa, digite /pular.",
@@ -175,10 +207,7 @@ class logAscent:
     
     async def location(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Stores the inputed location and asks for notes."""
-        self.ascent["location"] = {
-            "latitude": update.message.location.latitude,
-            "longitude": update.message.location.longitude,
-        }
+        self.ascent.set_location(update.message.location.latitude, update.message.location.longitude)
         logger.info(f"Location of the user: {self.ascent['location']}")
         await update.message.reply_text(
             f"Você quer adicionar alguma observação sobre a escalada?\n\nSe você quiser pular essa etapa, digite /pular.",
@@ -196,7 +225,7 @@ class logAscent:
     
     async def notes(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Stores the inputed notes and finishes the conversation."""
-        self.ascent["notes"] = update.message.text
+        self.ascent.set_notes(update.message.text)
         logger.info(f"Notes of the user: {self.ascent['notes']}")
         self.mongo_client.ascents.insert_one(self.ascent)
         await update.message.reply_text(
